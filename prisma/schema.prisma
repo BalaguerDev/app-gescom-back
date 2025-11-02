@@ -1,0 +1,274 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id            Int             @id @default(autoincrement())
+  name          String
+  slug          String          @unique
+  taxId         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  activityLogs  ActivityLog[]
+  campaigns     Campaign[]
+  clients       Client[]
+  targets       CompanyTarget[]
+  discountTypes DiscountType[]
+  families      Family[]
+  orders        Order[]
+  prices        Price[]
+  products      Product[]
+  salesTargets  SalesTarget[]
+  users         User[]
+}
+
+model User {
+  id            Int           @id @default(autoincrement())
+  auth0Id       String?       @unique
+  email         String        @unique
+  name          String?
+  role          Role          @default(SALES)
+  companyId     Int
+  managerId     Int?
+  startPoint    String?
+  startTime     String?
+  endPoint      String?
+  endTime       String?
+  userImage     String?
+  objectives    Json?
+  /// 🔹 Indica la fuente de datos del usuario
+  /// DEMO = datos fake generados automáticamente
+  /// REAL = datos reales importados desde sistemas externos (SAP, CRM, etc.)
+  dataSource    DataSource    @default(DEMO)
+  hasConfigured Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  activityLogs  ActivityLog[]
+  clients       Client[]      @relation("UserToClients")
+  orders        Order[]       @relation("orders_by_user")
+  targets       SalesTarget[]
+  company       Company       @relation(fields: [companyId], references: [id])
+  manager       User?         @relation("ManagerToSales", fields: [managerId], references: [id])
+  team          User[]        @relation("ManagerToSales")
+  visits        Visit[]
+}
+
+model Family {
+  id        Int       @id @default(autoincrement())
+  companyId Int
+  key       String
+  name      String
+  createdAt DateTime  @default(now())
+  company   Company   @relation(fields: [companyId], references: [id])
+  products  Product[]
+}
+
+model Product {
+  id               Int               @id @default(autoincrement())
+  companyId        Int
+  sku              String
+  name             String
+  description      String?
+  familyId         Int?
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  campaignProducts CampaignProduct[]
+  orderItems       OrderItem[]
+  prices           Price[]
+  company          Company           @relation(fields: [companyId], references: [id])
+  family           Family?           @relation(fields: [familyId], references: [id])
+}
+
+model Price {
+  id        Int       @id @default(autoincrement())
+  productId Int
+  companyId Int
+  clientId  Int?
+  amount    Float
+  currency  String    @default("EUR")
+  validFrom DateTime?
+  validTo   DateTime?
+  client    Client?   @relation(fields: [clientId], references: [id])
+  company   Company   @relation(fields: [companyId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+}
+
+model DiscountType {
+  id          Int     @id @default(autoincrement())
+  companyId   Int
+  code        String
+  name        String
+  percentage  Float?
+  fixed       Float?
+  description String?
+  active      Boolean @default(true)
+  company     Company @relation(fields: [companyId], references: [id])
+}
+
+model Campaign {
+  id               Int               @id @default(autoincrement())
+  companyId        Int
+  name             String
+  description      String?
+  startDate        DateTime?
+  endDate          DateTime?
+  conditions       Json?
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  company          Company           @relation(fields: [companyId], references: [id])
+  campaignProducts CampaignProduct[]
+}
+
+model CampaignProduct {
+  id         Int      @id @default(autoincrement())
+  campaignId Int
+  productId  Int
+  bonusJson  Json?
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@unique([campaignId, productId])
+}
+
+model Client {
+  id                 Int                    @id @default(autoincrement())
+  companyId          Int
+  assignedToId       Int?
+  name               String
+  cif                String?
+  phone              String?
+  email              String?
+  address            String?
+  city               String?
+  postalCode         String?
+  category           String?
+  notes              String?
+  lat                Float?
+  lng                Float?
+  active             Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  revenueCurrentYear Json?
+  revenueLastYear    Json?
+  assignedTo         User?                  @relation("UserToClients", fields: [assignedToId], references: [id])
+  company            Company                @relation(fields: [companyId], references: [id])
+  clientTags         ClientTag[]
+  monthlyRevenues    MonthlyClientRevenue[]
+  orders             Order[]
+  prices             Price[]
+  visits             Visit[]
+}
+
+model ClientTag {
+  id       Int    @id @default(autoincrement())
+  clientId Int
+  key      String
+  value    String
+  client   Client @relation(fields: [clientId], references: [id])
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  companyId   Int
+  clientId    Int
+  userId      Int?
+  orderNumber String
+  date        DateTime
+  total       Float
+  notes       String?
+  createdAt   DateTime    @default(now())
+  client      Client      @relation(fields: [clientId], references: [id])
+  company     Company     @relation(fields: [companyId], references: [id])
+  user        User?       @relation("orders_by_user", fields: [userId], references: [id])
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int?
+  ref       String?
+  name      String?
+  cantidad  Int
+  precio    Float
+  total     Float
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product? @relation(fields: [productId], references: [id])
+}
+
+model MonthlyClientRevenue {
+  id       Int    @id @default(autoincrement())
+  clientId Int
+  year     Int
+  month    Int
+  total    Float  @default(0)
+  byFamily Json?
+  client   Client @relation(fields: [clientId], references: [id])
+
+  @@unique([clientId, year, month])
+  @@index([year, month])
+}
+
+model SalesTarget {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  companyId Int
+  year      Int
+  month     Int?
+  amount    Float
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model CompanyTarget {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  year      Int
+  month     Int?
+  amount    Float
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+}
+
+model Visit {
+  id        Int      @id @default(autoincrement())
+  clientId  Int
+  userId    Int
+  date      DateTime
+  status    String
+  notes     String?
+  reason    String?
+  createdAt DateTime @default(now())
+  client    Client   @relation(fields: [clientId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  userId    Int
+  type      String
+  meta      Json?
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES
+  ANALYST
+}
+
+enum DataSource {
+  DEMO
+  REAL
+}
