@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +9,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==============================
+// 📦 COMPANY
+// ==============================
 model Company {
   id            Int             @id @default(autoincrement())
   name          String
@@ -25,8 +30,12 @@ model Company {
   products      Product[]
   salesTargets  SalesTarget[]
   users         User[]
+  zones         Zone[]          // 🔹 Relación con zonas creadas por la empresa
 }
 
+// ==============================
+// 👤 USER
+// ==============================
 model User {
   id            Int           @id @default(autoincrement())
   auth0Id       String?       @unique
@@ -41,13 +50,11 @@ model User {
   endTime       String?
   userImage     String?
   objectives    Json?
-  /// 🔹 Indica la fuente de datos del usuario
-  /// DEMO = datos fake generados automáticamente
-  /// REAL = datos reales importados desde sistemas externos (SAP, CRM, etc.)
   dataSource    DataSource    @default(DEMO)
   hasConfigured Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
   activityLogs  ActivityLog[]
   clients       Client[]      @relation("UserToClients")
   orders        Order[]       @relation("orders_by_user")
@@ -56,8 +63,12 @@ model User {
   manager       User?         @relation("ManagerToSales", fields: [managerId], references: [id])
   team          User[]        @relation("ManagerToSales")
   visits        Visit[]
+  zones         Zone[]        // 🔹 Relación con zonas creadas por el usuario
 }
 
+// ==============================
+// 🏷️ FAMILY / PRODUCT / PRICE
+// ==============================
 model Family {
   id        Int       @id @default(autoincrement())
   companyId Int
@@ -99,6 +110,9 @@ model Price {
   product   Product   @relation(fields: [productId], references: [id])
 }
 
+// ==============================
+// 💸 DISCOUNTS / CAMPAIGNS
+// ==============================
 model DiscountType {
   id          Int     @id @default(autoincrement())
   companyId   Int
@@ -136,6 +150,9 @@ model CampaignProduct {
   @@unique([campaignId, productId])
 }
 
+// ==============================
+// 👥 CLIENTS
+// ==============================
 model Client {
   id                 Int                    @id @default(autoincrement())
   companyId          Int
@@ -156,6 +173,7 @@ model Client {
   updatedAt          DateTime               @updatedAt
   revenueCurrentYear Json?
   revenueLastYear    Json?
+
   assignedTo         User?                  @relation("UserToClients", fields: [assignedToId], references: [id])
   company            Company                @relation(fields: [companyId], references: [id])
   clientTags         ClientTag[]
@@ -173,6 +191,9 @@ model ClientTag {
   client   Client @relation(fields: [clientId], references: [id])
 }
 
+// ==============================
+// 📦 ORDERS
+// ==============================
 model Order {
   id          Int         @id @default(autoincrement())
   companyId   Int
@@ -183,6 +204,7 @@ model Order {
   total       Float
   notes       String?
   createdAt   DateTime    @default(now())
+
   client      Client      @relation(fields: [clientId], references: [id])
   company     Company     @relation(fields: [companyId], references: [id])
   user        User?       @relation("orders_by_user", fields: [userId], references: [id])
@@ -202,6 +224,9 @@ model OrderItem {
   product   Product? @relation(fields: [productId], references: [id])
 }
 
+// ==============================
+// 📊 REVENUE / TARGETS
+// ==============================
 model MonthlyClientRevenue {
   id       Int    @id @default(autoincrement())
   clientId Int
@@ -237,6 +262,9 @@ model CompanyTarget {
   company   Company  @relation(fields: [companyId], references: [id])
 }
 
+// ==============================
+// 📍 VISITS / ACTIVITY LOG
+// ==============================
 model Visit {
   id        Int      @id @default(autoincrement())
   clientId  Int
@@ -246,6 +274,7 @@ model Visit {
   notes     String?
   reason    String?
   createdAt DateTime @default(now())
+
   client    Client   @relation(fields: [clientId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 }
@@ -257,10 +286,35 @@ model ActivityLog {
   type      String
   meta      Json?
   createdAt DateTime @default(now())
+
   company   Company  @relation(fields: [companyId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 }
 
+// ==============================
+// 🗺️ ZONES (Nuevo)
+// ==============================
+model Zone {
+  id          Int      @id @default(autoincrement())
+  name        String
+  color       String   @default("#3b82f6")
+  path        Json     // coordenadas [{lat, lng}, ...]
+  clients     Json     // clientes dentro de la zona
+  userId      Int
+  companyId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  @@index([userId])
+  @@index([companyId])
+}
+
+// ==============================
+// ENUMS
+// ==============================
 enum Role {
   ADMIN
   MANAGER
