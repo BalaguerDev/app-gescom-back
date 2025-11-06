@@ -13,4 +13,8 @@ router.post("/", checkJwt, zoneController.createZone);
 // ✅ Eliminar una zona
 router.delete("/:id", checkJwt, zoneController.deleteZone);
 
+// ✅ Generar Zona automáticamente
+router.post("/auto", checkJwt, zoneController.autoGenerateZones);
+
+
 export default router;

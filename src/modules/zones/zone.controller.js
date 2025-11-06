@@ -8,34 +8,36 @@ const getUserFromAuth = async (req) => {
     const auth0Id = req.auth?.sub;
     if (!auth0Id) throw new Error("Token inválido o sin usuario");
 
-    const user = await prisma.user.findUnique({
-        where: { auth0Id },
-    });
-
+    const user = await prisma.user.findUnique({ where: { auth0Id } });
     if (!user) throw new Error("Usuario no encontrado en la base de datos");
+
     return user;
 };
 
-// 📍 Obtener zonas del usuario actual
+/**
+ * 📦 Obtener zonas del usuario actual
+ */
 export const getZones = async (req, res) => {
     try {
         const user = await getUserFromAuth(req);
         const zones = await zoneService.getZonesByUser(user.id);
-        res.json(zones);
+        res.json({ success: true, zones });
     } catch (error) {
         console.error("❌ Error obteniendo zonas:", error);
-        res.status(500).json({ message: "Error al obtener las zonas" });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// ➕ Crear una nueva zona
+/**
+ * ➕ Crear una nueva zona
+ */
 export const createZone = async (req, res) => {
     try {
         const user = await getUserFromAuth(req);
         const { name, color, path, clients } = req.body;
 
         if (!name || !path) {
-            return res.status(400).json({ message: "Faltan datos requeridos" });
+            return res.status(400).json({ success: false, message: "Faltan datos requeridos" });
         }
 
         const zone = await zoneService.createZone({
@@ -47,14 +49,16 @@ export const createZone = async (req, res) => {
             companyId: user.companyId,
         });
 
-        res.status(201).json(zone);
+        res.status(201).json({ success: true, zone });
     } catch (error) {
         console.error("❌ Error creando zona:", error);
-        res.status(500).json({ message: "Error al crear la zona" });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// 🗑️ Eliminar zona
+/**
+ * 🗑️ Eliminar una zona
+ */
 export const deleteZone = async (req, res) => {
     try {
         const user = await getUserFromAuth(req);
@@ -64,6 +68,22 @@ export const deleteZone = async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error("❌ Error eliminando zona:", error);
-        res.status(500).json({ message: "Error al eliminar la zona" });
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * ⚙️ Generar zonas automáticamente
+ */
+export const autoGenerateZones = async (req, res) => {
+    try {
+        const user = await getUserFromAuth(req);
+        const { k } = req.query;
+
+        const zones = await zoneService.autoGenerateZones(user.id, Number(k) || 5);
+        res.status(201).json({ success: true, zones });
+    } catch (error) {
+        console.error("❌ Error generando zonas automáticamente:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
