@@ -16,5 +16,9 @@ router.delete("/:id", checkJwt, zoneController.deleteZone);
 // ✅ Generar Zona automáticamente
 router.post("/auto", checkJwt, zoneController.autoGenerateZones);
 
+// ✅ Actualizar una zona existente (nombre, color, etc.)
+router.put("/:id", checkJwt, zoneController.updateZone);
+
+
 
 export default router;

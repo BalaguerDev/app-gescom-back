@@ -87,3 +87,26 @@ export const autoGenerateZones = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+/**
+ * ✏️ Actualizar una zona existente
+ */
+export const updateZone = async (req, res) => {
+    try {
+        const user = await getUserFromAuth(req);
+        const { id } = req.params;
+        const { name, color, path, clients } = req.body;
+
+        const updatedZone = await zoneService.updateZone(Number(id), user.id, {
+            name,
+            color,
+            path,
+            clients,
+        });
+
+        res.json({ success: true, zone: updatedZone });
+    } catch (error) {
+        console.error("❌ Error actualizando zona:", error);
+        res.status(404).json({ success: false, message: error.message });
+    }
+};

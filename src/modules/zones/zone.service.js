@@ -172,3 +172,14 @@ export const autoGenerateZones = async (userId, k = 5) => {
     console.log(`✅ ${createdZones.length} zonas creadas sin duplicar clientes.`);
     return createdZones;
 };
+
+// ✏️ Actualizar zona
+export const updateZone = async (id, userId, data) => {
+    const zone = await prisma.zone.findFirst({ where: { id, userId } });
+    if (!zone) throw new Error("Zona no encontrada o sin permiso");
+
+    return prisma.zone.update({
+        where: { id },
+        data,
+    });
+};
