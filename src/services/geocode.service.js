@@ -1,30 +1,25 @@
-// src/services/geocode.service.js
+// src/services/route/geocode.service.js
 import fetch from "node-fetch";
 import { ENV } from "../config/env.js";
 
-/**
- * Servicio de geocodificación de direcciones mediante la API de Google Maps
- */
 export async function getCoordinatesFromAddress(address) {
-    if (!address) return null;
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      address
+    )}&key=${ENV.GOOGLE_MAPS_API_KEY}`;
 
-    const encoded = encodeURIComponent(address);
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${ENV.GOOGLE_MAPS_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
 
-    try {
-        console.log("📍 Solicitando coordenadas para:", address);
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.status !== "OK" || !data.results.length) {
-            console.warn("⚠️ No se encontraron coordenadas para:", address);
-            return null;
-        }
-
-        const location = data.results[0].geometry.location;
-        return { lat: location.lat, lng: location.lng };
-    } catch (err) {
-        console.error("❌ Error obteniendo coordenadas:", err.message);
-        return null;
+    if (!data.results?.length) {
+      console.error("❌ Geocode sin resultados:", data);
+      return null;
     }
+
+    const loc = data.results[0].geometry.location;
+    return { lat: loc.lat, lng: loc.lng };
+  } catch (err) {
+    console.error("❌ Error geocode:", err);
+    return null;
+  }
 }

@@ -6,6 +6,7 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 import userRoutes from "./modules/users/user.routes.js";
 import clientRoutes from "./modules/clients/client.routes.js";
 import zoneRoutes from "./modules/zones/zone.routes.js";
+import routeRoutes from "./modules/routes/routes.routes.js";
 
 export async function createServer() {
     const app = express();
@@ -18,6 +19,7 @@ export async function createServer() {
     app.use("/api/users", userRoutes);
     app.use("/api/clients", clientRoutes);
     app.use("/api/zones", zoneRoutes);
+    app.use("/api/routes", routeRoutes);
 
 
     app.use(errorHandler);

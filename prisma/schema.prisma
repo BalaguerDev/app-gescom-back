@@ -31,6 +31,7 @@ model Company {
   salesTargets  SalesTarget[]
   users         User[]
   zones         Zone[]          // 🔹 Relación con zonas creadas por la empresa
+  routes        Route[]
 }
 
 // ==============================
@@ -64,6 +65,9 @@ model User {
   team          User[]        @relation("ManagerToSales")
   visits        Visit[]
   zones         Zone[]        // 🔹 Relación con zonas creadas por el usuario
+
+  // Rutas asignadas al usuario (owner/driver)
+  routes        Route[]       @relation("UserRoutes")
 }
 
 // ==============================
@@ -181,8 +185,14 @@ model Client {
   orders             Order[]
   prices             Price[]
   visits             Visit[]
+
+  // Relación con paradas de ruta
+  routeStops         RouteStop[]
 }
 
+// ==============================
+// ClientTag
+// ==============================
 model ClientTag {
   id       Int    @id @default(autoincrement())
   clientId Int
@@ -196,7 +206,7 @@ model ClientTag {
 // ==============================
 model Order {
   id          Int         @id @default(autoincrement())
-  companyId   Int
+  companyId   Int         @default(1)
   clientId    Int
   userId      Int?
   orderNumber String
@@ -313,6 +323,62 @@ model Zone {
 }
 
 // ==============================
+// 🛣️ RUTAS (NUEVO)
+// ==============================
+model Route {
+  id               Int         @id @default(autoincrement())
+  userId           Int
+  companyId        Int
+  date             DateTime    // fecha de la ruta (día)
+  startAddress     String
+  endAddress       String
+  startLat         Float?
+  startLng         Float?
+  endLat           Float?
+  endLng           Float?
+  startTime        String      // "07:00"
+  endTime          String      // "18:30"
+  breakMinutes     Int         @default(90)
+  totalKm          Float       @default(0)
+  totalDrivingMin  Int         @default(0)
+  totalVisitMin    Int         @default(0)
+  estimatedRevenue Float       @default(0)
+  createdAt        DateTime    @default(now())
+
+  user      User       @relation("UserRoutes", fields: [userId], references: [id])
+  company   Company    @relation(fields: [companyId], references: [id])
+  stops     RouteStop[]
+
+  @@index([userId])
+  @@index([companyId])
+  @@unique([userId, date])
+}
+
+model RouteStop {
+  id               Int      @id @default(autoincrement())
+  routeId          Int
+  clientId         Int
+  orderIndex       Int
+  arrivalTime      String   // "08:30"
+  departureTime    String   // "09:50"
+  visitMinutes     Int
+  driveMinutes     Int
+  distanceKm       Float
+  paretoClass      ParetoClass
+  estimatedRevenue Float?
+  visited          Boolean  @default(false)
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  route   Route  @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  client  Client @relation(fields: [clientId], references: [id])
+
+  @@index([routeId])
+  @@index([clientId])
+  @@index([orderIndex])
+}
+
+// ==============================
 // ENUMS
 // ==============================
 enum Role {
@@ -325,4 +391,10 @@ enum Role {
 enum DataSource {
   DEMO
   REAL
+}
+
+enum ParetoClass {
+  A
+  B
+  C
 }
